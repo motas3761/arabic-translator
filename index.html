@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Arabic Translator</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #222535;
+      --border: #2e3147;
+      --accent: #6c63ff;
+      --accent2: #8b85ff;
+      --text: #e8eaf0;
+      --text-muted: #7b7f9e;
+      --success: #4caf81;
+      --error: #e05c6a;
+      --warning: #f5a623;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(0,0,0,.4);
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e1b4b 100%);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+
+    header h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #a5b4fc, #e0e7ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ── API Key Bar ── */
+    .api-key-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .api-key-bar label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .api-key-input {
+      flex: 1;
+      min-width: 240px;
+      max-width: 500px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      padding: 7px 12px;
+      font-size: 0.85rem;
+      font-family: 'Courier New', monospace;
+      transition: border-color .2s;
+      outline: none;
+    }
+    .api-key-input:focus { border-color: var(--accent); }
+
+    .security-note {
+      font-size: 0.75rem;
+      color: var(--warning);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ── Controls bar ── */
+    .controls-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .lang-selector {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+    }
+
+    .lang-selector span {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    .lang-btn {
+      padding: 7px 18px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: all .2s;
+    }
+    .lang-btn:hover { border-color: var(--accent); color: var(--text); }
+    .lang-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .action-btns {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      padding: 7px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all .2s;
+    }
+    .btn:hover { background: var(--border); }
+    .btn:active { transform: scale(.97); }
+    .btn.copy-btn.copied { background: var(--success); border-color: var(--success); color: #fff; }
+    .btn.clear-btn:hover { background: rgba(224,92,106,.15); border-color: var(--error); color: var(--error); }
+
+    /* ── Main translator ── */
+    main {
+      flex: 1;
+      padding: 24px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .translator-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      flex: 1;
+    }
+
+    @media (max-width: 700px) {
+      .translator-grid { grid-template-columns: 1fr; }
+      main { padding: 16px; }
+      header, .api-key-bar, .controls-bar { padding: 12px 16px; }
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      min-height: 360px;
+    }
+
+    .panel-header {
+      padding: 12px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface2);
+    }
+
+    .panel-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .panel-title .flag { font-size: 1rem; }
+
+    .char-count {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      resize: none;
+      padding: 16px;
+      font-size: 1.1rem;
+      color: var(--text);
+      line-height: 1.7;
+      font-family: 'Segoe UI', 'Noto Sans Arabic', 'Arial', sans-serif;
+      min-height: 300px;
+    }
+
+    #input-area {
+      direction: rtl;
+      text-align: right;
+    }
+
+    #input-area::placeholder {
+      direction: rtl;
+      color: var(--text-muted);
+    }
+
+    #output-area {
+      color: var(--text);
+      cursor: default;
+      user-select: text;
+    }
+
+    #output-area::placeholder {
+      color: var(--text-muted);
+    }
+
+    .output-panel .panel-header {
+      background: linear-gradient(90deg, rgba(108,99,255,.12), var(--surface2));
+    }
+
+    /* ── Loading & status ── */
+    .status-bar {
+      height: 36px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-top: 1px solid var(--border);
+      font-size: 0.78rem;
+    }
+
+    .status-idle { color: var(--text-muted); }
+    .status-loading { color: var(--accent2); }
+    .status-success { color: var(--success); }
+    .status-error { color: var(--error); }
+
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent2);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: none;
+    }
+    .status-loading .spinner { display: block; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      display: none;
+    }
+    .status-success .dot { display: block; background: var(--success); }
+    .status-error .dot { display: block; background: var(--error); }
+
+    /* ── Mic button ── */
+    .mic-btn {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .2s;
+      flex-shrink: 0;
+      padding: 0;
+    }
+    .mic-btn:hover { border-color: var(--accent); color: var(--accent2); background: rgba(108,99,255,.1); }
+    .mic-btn.recording {
+      background: rgba(224,92,106,.15);
+      border-color: var(--error);
+      color: var(--error);
+      animation: mic-pulse 1.2s ease-in-out infinite;
+    }
+    .mic-btn.unsupported { opacity: .35; cursor: not-allowed; }
+
+    @keyframes mic-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(224,92,106,.4); }
+      50%       { box-shadow: 0 0 0 6px rgba(224,92,106,0); }
+    }
+
+    /* Recording badge in input status bar */
+    .recording-badge {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--error);
+    }
+    .recording-badge.visible { display: flex; }
+    .rec-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--error);
+      animation: rec-blink .9s ease-in-out infinite;
+    }
+    @keyframes rec-blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+    /* ── Error message ── */
+    .error-box {
+      display: none;
+      margin: 0 32px 16px;
+      background: rgba(224,92,106,.1);
+      border: 1px solid rgba(224,92,106,.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 0.85rem;
+      color: #f87171;
+      line-height: 1.5;
+    }
+    .error-box.visible { display: flex; gap: 8px; align-items: flex-start; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo">🌐</div>
+    <h1>Arabic Translator</h1>
+  </div>
+  <div class="header-right">
+    <span style="font-size:.8rem;color:#a5b4fc">Powered by Claude</span>
+  </div>
+</header>
+
+<!-- API Key -->
+<div class="api-key-bar">
+  <label for="api-key">API Key:</label>
+  <input
+    id="api-key"
+    class="api-key-input"
+    type="password"
+    placeholder="sk-ant-..."
+    autocomplete="off"
+    spellcheck="false"
+  />
+  <span class="security-note">
+    ⚠ Key is saved in localStorage. Never share this page with your key visible.
+  </span>
+</div>
+
+<!-- Controls -->
+<div class="controls-bar">
+  <div class="lang-selector">
+    <span>Translate to:</span>
+    <button class="lang-btn" id="btn-he" onclick="setLang('he')">🇮🇱 Hebrew</button>
+    <button class="lang-btn" id="btn-en" onclick="setLang('en')">🇺🇸 English</button>
+  </div>
+  <div class="action-btns">
+    <button class="btn copy-btn" id="copy-btn" onclick="copyOutput()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+      </svg>
+      Copy
+    </button>
+    <button class="btn clear-btn" onclick="clearAll()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+      </svg>
+      Clear
+    </button>
+  </div>
+</div>
+
+<!-- Error box -->
+<div class="error-box" id="error-box">
+  <span>⚠</span>
+  <span id="error-text"></span>
+</div>
+
+<main>
+  <div class="translator-grid">
+
+    <!-- Input panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <span class="flag">🇸🇦</span> Arabic Input
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="char-count" id="char-count">0 chars</span>
+          <button class="mic-btn" id="mic-btn" title="Record Arabic speech" onclick="toggleRecording()">
+            <svg id="mic-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="23"/>
+              <line x1="8" y1="23" x2="16" y2="23"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <textarea
+        id="input-area"
+        placeholder="اكتب النص العربي هنا..."
+        lang="ar"
+        dir="rtl"
+        spellcheck="false"
+      ></textarea>
+      <div class="status-bar status-idle" id="input-status">
+        <div class="recording-badge" id="recording-badge">
+          <div class="rec-dot"></div>
+          <span id="recording-text">Recording...</span>
+        </div>
+        <span id="input-status-text">Ready</span>
+      </div>
+    </div>
+
+    <!-- Output panel -->
+    <div class="panel output-panel">
+      <div class="panel-header">
+        <div class="panel-title" id="output-title">
+          <span class="flag" id="output-flag">🇮🇱</span>
+          <span id="output-lang-label">Hebrew Translation</span>
+        </div>
+      </div>
+      <textarea
+        id="output-area"
+        placeholder="Translation will appear here..."
+        readonly
+        dir="rtl"
+        lang="he"
+      ></textarea>
+      <div class="status-bar status-idle" id="output-status">
+        <div class="spinner"></div>
+        <div class="dot"></div>
+        <span id="status-text">Waiting for input...</span>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  // ── State ──
+  let targetLang = 'he';
+  let abortController = null;
+
+  // ── Language config ──
+  const LANGS = {
+    he: { flag: '🇮🇱', label: 'Hebrew Translation', dir: 'rtl', lang: 'he', name: 'Hebrew' },
+    en: { flag: '🇺🇸', label: 'English Translation', dir: 'ltr', lang: 'en', name: 'English' },
+  };
+
+  // ── DOM refs ──
+  const inputEl      = document.getElementById('input-area');
+  const outputEl     = document.getElementById('output-area');
+  const charCount    = document.getElementById('char-count');
+  const outputFlag   = document.getElementById('output-flag');
+  const outputLabel  = document.getElementById('output-lang-label');
+  const statusEl     = document.getElementById('output-status');
+  const statusText   = document.getElementById('status-text');
+  const errorBox     = document.getElementById('error-box');
+  const errorText    = document.getElementById('error-text');
+  const apiKeyInput  = document.getElementById('api-key');
+  const copyBtn      = document.getElementById('copy-btn');
+
+  // ── API key persistence ──
+  const STORAGE_KEY = 'arabic_translator_api_key';
+  apiKeyInput.value = localStorage.getItem(STORAGE_KEY) || '';
+  apiKeyInput.addEventListener('input', () => {
+    const val = apiKeyInput.value.trim();
+    if (val) localStorage.setItem(STORAGE_KEY, val);
+    else localStorage.removeItem(STORAGE_KEY);
+  });
+
+  // ── Init ──
+  setLang('he');
+
+  // ── Lang selector ──
+  function setLang(lang) {
+    targetLang = lang;
+    const cfg = LANGS[lang];
+    outputFlag.textContent   = cfg.flag;
+    outputLabel.textContent  = cfg.label;
+    outputEl.setAttribute('dir', cfg.dir);
+    outputEl.setAttribute('lang', cfg.lang);
+    outputEl.style.textAlign = cfg.dir === 'rtl' ? 'right' : 'left';
+
+    document.getElementById('btn-he').classList.toggle('active', lang === 'he');
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+
+    // Re-translate if there's content (manual typing mode)
+    if (inputEl.value.trim()) translateSegment(inputEl.value.trim());
+  }
+
+  // ── Input handler (manual typing only — not used during recording) ──
+  inputEl.addEventListener('input', () => {
+    const len = inputEl.value.length;
+    charCount.textContent = `${len} char${len !== 1 ? 's' : ''}`;
+    if (!inputEl.value.trim()) {
+      setStatus('idle', 'Waiting for input...');
+      hideError();
+    }
+  });
+
+  // ── Translation (streaming, appends one line to output) ──
+  async function translateSegment(text) {
+    const apiKey = apiKeyInput.value.trim();
+    if (!apiKey) { showError('Please enter your Anthropic API key above.'); return; }
+    if (!text) return;
+
+    // Cancel any in-flight request before starting a new one
+    if (abortController) abortController.abort();
+    abortController = new AbortController();
+
+    setStatus('loading', 'Translating...');
+    hideError();
+
+    // Start a new line in the output for this segment
+    if (outputEl.value && !outputEl.value.endsWith('\n')) outputEl.value += '\n';
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        signal: abortController.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true',
+        },
+        body: JSON.stringify({
+          model: 'claude-haiku-4-5-20251001',
+          max_tokens: 300,
+          stream: true,
+          system: `You are a professional Arabic translator. Translate the user's Arabic text to ${LANGS[targetLang].name}. Return ONLY the translated text — no explanations, no notes, no labels.`,
+          messages: [{ role: 'user', content: text }]
+        }),
+      });
+
+      if (!response.ok) {
+        let errMsg = `API error ${response.status}`;
+        try {
+          const errBody = await response.json();
+          errMsg = errBody?.error?.message || errMsg;
+          if (response.status === 401) errMsg = 'Invalid API key. Check that your key starts with "sk-ant-".';
+          if (response.status === 429) errMsg = 'Rate limit reached. Please wait a moment and try again.';
+          if (response.status === 403) errMsg = 'Access denied. Your API key may not have permission.';
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+          try {
+            const evt = JSON.parse(data);
+            if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+              outputEl.value += evt.delta.text;
+              outputEl.scrollTop = outputEl.scrollHeight;
+            }
+          } catch (_) {}
+        }
+      }
+
+      setStatus('success', `Translated to ${LANGS[targetLang].name}`);
+
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      console.error('Translation error:', err);
+      showError(err.message || 'Translation failed. Check your connection and API key.');
+      setStatus('error', 'Translation failed');
+    }
+  }
+
+  // ── Status helpers ──
+  function setStatus(type, msg) {
+    statusEl.className = `status-bar status-${type}`;
+    statusText.textContent = msg;
+  }
+
+  function showError(msg) {
+    errorBox.classList.add('visible');
+    errorText.textContent = msg;
+  }
+
+  function hideError() {
+    errorBox.classList.remove('visible');
+  }
+
+  // ── Copy button ──
+  async function copyOutput() {
+    const text = outputEl.value;
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      copyBtn.classList.add('copied');
+      copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+      setTimeout(() => {
+        copyBtn.classList.remove('copied');
+        copyBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy`;
+      }, 2000);
+    } catch (_) {
+      // Fallback for older browsers
+      outputEl.select();
+      document.execCommand('copy');
+    }
+  }
+
+  // ── Clear button ──
+  function clearAll() {
+    inputEl.value = '';
+    outputEl.value = '';
+    charCount.textContent = '0 chars';
+    setStatus('idle', 'Waiting for input...');
+    hideError();
+    if (abortController) { abortController.abort(); abortController = null; }
+    inputEl.focus();
+  }
+
+  // ── Keyboard shortcut: Ctrl+Enter to translate immediately ──
+  inputEl.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+      translateSegment(inputEl.value.trim());
+    }
+  });
+
+  // ── Auto-focus input ──
+  inputEl.focus();
+
+  // ── Speech Recognition ──
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn            = document.getElementById('mic-btn');
+  const micIcon           = document.getElementById('mic-icon');
+  const recordingBadge    = document.getElementById('recording-badge');
+  const recordingText     = document.getElementById('recording-text');
+  const inputStatusText   = document.getElementById('input-status-text');
+
+  const MIC_SVG  = `<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+    <line x1="12" y1="19" x2="12" y2="23"/>
+    <line x1="8" y1="23" x2="16" y2="23"/>`;
+  const STOP_SVG = `<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>`;
+
+  let recognition = null;
+  let isRecording = false;
+  let userStopped = false;
+
+  if (!SpeechRecognition) {
+    micBtn.classList.add('unsupported');
+    micBtn.title = 'Speech recognition is not supported in this browser. Try Chrome or Edge.';
+  } else {
+    function buildRecognition() {
+      const r = new SpeechRecognition();
+      r.lang            = 'ar-SA';
+      r.continuous      = true;
+      r.interimResults  = true;
+      r.maxAlternatives = 1;
+
+      r.onstart = () => {
+        isRecording = true;
+        micBtn.classList.add('recording');
+        micIcon.innerHTML = STOP_SVG;
+        recordingBadge.classList.add('visible');
+        inputStatusText.style.display = 'none';
+        recordingText.textContent = 'Recording...';
+        hideError();
+      };
+
+      r.onresult = (e) => {
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const transcript = e.results[i][0].transcript.trim();
+          if (e.results[i].isFinal) {
+            // Final segment: clear the input box and immediately translate
+            inputEl.value = '';
+            charCount.textContent = '0 chars';
+            recordingText.textContent = 'Recording...';
+            translateSegment(transcript);
+          } else {
+            // Interim: show only the current in-progress segment
+            inputEl.value = transcript;
+            charCount.textContent = `${transcript.length} chars`;
+            recordingText.textContent = `"${transcript.slice(0, 36)}${transcript.length > 36 ? '…' : ''}"`;
+          }
+        }
+      };
+
+      r.onerror = (e) => {
+        const msgs = {
+          'not-allowed':         'Microphone access was denied. Please allow microphone permissions and try again.',
+          'audio-capture':       'No microphone found. Please connect a microphone and try again.',
+          'network':             'Network error during speech recognition. Check your connection.',
+          'service-not-allowed': 'Speech service not allowed. Make sure the page is served over HTTPS or localhost.',
+          'no-speech':           null, // normal during pauses — ignore
+          'aborted':             null, // we triggered this — ignore
+        };
+        const msg = msgs[e.error];
+        if (msg) { showError(msg); userStopped = true; stopRecordingUI(); }
+      };
+
+      r.onend = () => {
+        // Restart transparently on unexpected stops; only truly stop on user request
+        if (isRecording && !userStopped) {
+          try { recognition.start(); } catch (_) {}
+        } else {
+          stopRecordingUI();
+        }
+      };
+
+      return r;
+    }
+
+    recognition = buildRecognition();
+  }
+
+  function toggleRecording() {
+    if (!SpeechRecognition) {
+      showError('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+      return;
+    }
+    if (isRecording) {
+      userStopped = true;
+      recognition.stop();
+    } else {
+      userStopped = false;
+      recognition = buildRecognition();
+      try {
+        recognition.start();
+      } catch (err) {
+        stopRecordingUI();
+        showError('Could not start the microphone. Please try again.');
+      }
+    }
+  }
+
+  function stopRecordingUI() {
+    isRecording = false;
+    micBtn.classList.remove('recording');
+    micIcon.innerHTML = MIC_SVG;
+    recordingBadge.classList.remove('visible');
+    inputStatusText.style.display = '';
+    inputStatusText.textContent = 'Ready';
+  }
+</script>
+</body>
+</html>
