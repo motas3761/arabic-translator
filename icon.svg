@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#6d5fff"/>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6d5fff"/>
+      <stop offset="100%" stop-color="#a78bfa"/>
+    </linearGradient>
+  </defs>
+  <!-- Globe -->
+  <circle cx="256" cy="256" r="130" fill="none" stroke="white" stroke-width="18" opacity="0.95"/>
+  <!-- Latitude lines -->
+  <ellipse cx="256" cy="256" rx="60" ry="130" fill="none" stroke="white" stroke-width="14" opacity="0.85"/>
+  <!-- Horizontal lines -->
+  <line x1="126" y1="210" x2="386" y2="210" stroke="white" stroke-width="14" opacity="0.75"/>
+  <line x1="126" y1="302" x2="386" y2="302" stroke="white" stroke-width="14" opacity="0.75"/>
+</svg>
