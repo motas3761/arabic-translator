@@ -693,12 +693,12 @@
   inputEl.focus();
 
   // ── Speech Recognition ──
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const micBtn            = document.getElementById('mic-btn');
-  const micIcon           = document.getElementById('mic-icon');
-  const recordingBadge    = document.getElementById('recording-badge');
-  const recordingText     = document.getElementById('recording-text');
-  const inputStatusText   = document.getElementById('input-status-text');
+  const SpeechRecognitionAPI = window.webkitSpeechRecognition || window.SpeechRecognition;
+  const micBtn          = document.getElementById('mic-btn');
+  const micIcon         = document.getElementById('mic-icon');
+  const recordingBadge  = document.getElementById('recording-badge');
+  const recordingText   = document.getElementById('recording-text');
+  const inputStatusText = document.getElementById('input-status-text');
 
   const MIC_SVG  = `<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
     <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -710,75 +710,75 @@
   let isRecording = false;
   let userStopped = false;
 
-  if (!SpeechRecognition) {
+  // Mark button unsupported if API unavailable
+  if (!SpeechRecognitionAPI) {
     micBtn.classList.add('unsupported');
     micBtn.title = 'Speech recognition is not supported in this browser. Try Chrome or Edge.';
-  } else {
-    function buildRecognition() {
-      const r = new SpeechRecognition();
-      r.lang            = 'ar-SA';
-      r.continuous      = true;
-      r.interimResults  = true;
-      r.maxAlternatives = 1;
+  }
 
-      r.onstart = () => {
-        isRecording = true;
-        micBtn.classList.add('recording');
-        micIcon.innerHTML = STOP_SVG;
-        recordingBadge.classList.add('visible');
-        inputStatusText.style.display = 'none';
-        recordingText.textContent = 'Recording...';
-        hideError();
-      };
+  // buildRecognition defined at top level so toggleRecording() can always call it
+  function buildRecognition() {
+    const r = new SpeechRecognitionAPI();
+    r.lang            = 'ar-SA';
+    r.continuous      = true;
+    r.interimResults  = true;
+    r.maxAlternatives = 1;
 
-      r.onresult = (e) => {
-        for (let i = e.resultIndex; i < e.results.length; i++) {
-          const transcript = e.results[i][0].transcript.trim();
-          if (e.results[i].isFinal) {
-            // Final segment: clear the input box and immediately translate
-            inputEl.value = '';
-            charCount.textContent = '0 chars';
-            recordingText.textContent = 'Recording...';
-            translateSegment(transcript);
-          } else {
-            // Interim: show only the current in-progress segment
-            inputEl.value = transcript;
-            charCount.textContent = `${transcript.length} chars`;
-            recordingText.textContent = `"${transcript.slice(0, 36)}${transcript.length > 36 ? '…' : ''}"`;
-          }
-        }
-      };
+    r.onstart = () => {
+      isRecording = true;
+      micBtn.classList.add('recording');
+      micIcon.innerHTML = STOP_SVG;
+      recordingBadge.classList.add('visible');
+      inputStatusText.style.display = 'none';
+      recordingText.textContent = 'Recording...';
+      hideError();
+    };
 
-      r.onerror = (e) => {
-        const msgs = {
-          'not-allowed':         'Microphone access was denied. Please allow microphone permissions and try again.',
-          'audio-capture':       'No microphone found. Please connect a microphone and try again.',
-          'network':             'Network error during speech recognition. Check your connection.',
-          'service-not-allowed': 'Speech service not allowed. Make sure the page is served over HTTPS or localhost.',
-          'no-speech':           null, // normal during pauses — ignore
-          'aborted':             null, // we triggered this — ignore
-        };
-        const msg = msgs[e.error];
-        if (msg) { showError(msg); userStopped = true; stopRecordingUI(); }
-      };
-
-      r.onend = () => {
-        // Restart transparently on unexpected stops; only truly stop on user request
-        if (isRecording && !userStopped) {
-          try { recognition.start(); } catch (_) {}
+    r.onresult = (e) => {
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const transcript = e.results[i][0].transcript.trim();
+        if (e.results[i].isFinal) {
+          // Final segment: clear input box and immediately translate
+          inputEl.value = '';
+          charCount.textContent = '0 chars';
+          recordingText.textContent = 'Recording...';
+          translateSegment(transcript);
         } else {
-          stopRecordingUI();
+          // Interim: show live text in input box
+          inputEl.value = transcript;
+          charCount.textContent = `${transcript.length} chars`;
+          recordingText.textContent = `"${transcript.slice(0, 36)}${transcript.length > 36 ? '…' : ''}"`;
         }
+      }
+    };
+
+    r.onerror = (e) => {
+      const msgs = {
+        'not-allowed':         'Microphone access was denied. Please allow microphone permissions and try again.',
+        'audio-capture':       'No microphone found. Please connect a microphone and try again.',
+        'network':             'Network error during speech recognition. Check your connection.',
+        'service-not-allowed': 'Speech service not allowed. Make sure the page is served over HTTPS or localhost.',
+        'no-speech':           null, // normal during pauses — ignore
+        'aborted':             null, // triggered by us — ignore
       };
+      const msg = msgs[e.error];
+      if (msg) { showError(msg); userStopped = true; stopRecordingUI(); }
+    };
 
-      return r;
-    }
+    r.onend = () => {
+      // Restart transparently on unexpected stops; stop only when user clicked
+      if (isRecording && !userStopped) {
+        try { recognition.start(); } catch (_) {}
+      } else {
+        stopRecordingUI();
+      }
+    };
 
-    recognition = buildRecognition();
+    return r;
   }
 
   function toggleRecording() {
-    if (!SpeechRecognition) {
+    if (!SpeechRecognitionAPI) {
       showError('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
       return;
     }
